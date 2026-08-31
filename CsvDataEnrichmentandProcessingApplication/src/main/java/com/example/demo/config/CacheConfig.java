@@ -1,7 +1,6 @@
 package com.example.demo.config;
 
-
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -15,12 +14,12 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 @EnableCaching
 public class CacheConfig {
 	@Bean
-	public CacheManager cacheManager() {
+	CacheManager cacheManager() {
 		CaffeineCacheManager cacheManager = new CaffeineCacheManager("zipCodes");
 		cacheManager.setCaffeine(
 				Caffeine.newBuilder()
 				        .maximumSize(1000)
-				        .expireAfterWrite(Duration.ofMinutes(30))
+				        .expireAfterWrite(1,TimeUnit.HOURS)
 				);
 		return cacheManager;
 	}

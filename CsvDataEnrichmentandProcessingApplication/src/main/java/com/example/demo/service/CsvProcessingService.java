@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -54,14 +55,14 @@ public class CsvProcessingService {
 	
 	
 	public String csvParse(MultipartFile file) {
-	
+	    String filename = file.getOriginalFilename();
 		if(file.isEmpty()) {
 			throw new InvalidCsvFileException("Csv file is empty");
 		}
-		if(file.getOriginalFilename()==null || !file.getOriginalFilename().toLowerCase().endsWith(".csv")) {
+		if(filename==null || !filename.toLowerCase().endsWith(".csv")) {
 			throw new InvalidCsvFileException("Invalid file format, Please upload a csv file");
 		}
-		ProcessingAudit audit = auditService.startAudit(file.getOriginalFilename());
+		ProcessingAudit audit = auditService.startAudit(filename);
 		List<CompletableFuture<User>> futures = new ArrayList<>();
 		List<String> failedRecords = new CopyOnWriteArrayList<>();
 		try {
@@ -139,7 +140,7 @@ public class CsvProcessingService {
 				                  .map(CompletableFuture::join)
 				                  .filter(user->user!=null)
 				                  .toList();
-
+        Objects.requireNonNull(users);
 		repository.saveAll(users); 
 		System.out.println("Failed Records");
 		failedRecords.forEach(System.out::println);
