@@ -2,13 +2,14 @@ package com.example.demo.service;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.concurrent.Executor;
-
-import jakarta.validation.Validator;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import com.example.demo.entity.ProcessingAudit;
 import com.example.demo.exception.InvalidCsvFileException;
 import com.example.demo.repository.UserRepository;
 
+import jakarta.validation.Validator;
 
 @ExtendWith(MockitoExtension.class)
 class CsvProcessingServiceTest {
@@ -42,11 +44,9 @@ class CsvProcessingServiceTest {
     @Mock
     private ProcessingAuditService auditService;
 
-
     private CsvProcessingService service;
 
     private Executor executor;
-
 
     @BeforeEach
     void setUp() {
@@ -65,13 +65,12 @@ class CsvProcessingServiceTest {
     @Test
     void csvParse_shouldThrowExceptionWhenFileIsEmpty() {
 
-        MultipartFile file =
-                new MockMultipartFile(
-                        "file",
-                        "users.csv",
-                        "text/csv",
-                        new byte[0]
-                );
+        MultipartFile file = new MockMultipartFile(
+                "file",
+                "users.csv",
+                "text/csv",
+                new byte[0]
+        );
 
         assertThrows(
                 InvalidCsvFileException.class,
@@ -88,13 +87,12 @@ class CsvProcessingServiceTest {
     @Test
     void csvParse_shouldThrowExceptionWhenFileIsNotCsv() {
 
-        MultipartFile file =
-                new MockMultipartFile(
-                        "file",
-                        "users.txt",
-                        "text/plain",
-                        "some data".getBytes()
-                );
+        MultipartFile file = new MockMultipartFile(
+                "file",
+                "users.txt",
+                "text/plain",
+                "some data".getBytes()
+        );
 
         assertThrows(
                 InvalidCsvFileException.class,
@@ -111,66 +109,73 @@ class CsvProcessingServiceTest {
     @Test
     void csvParse_shouldProcessValidCsv() {
 
-    	String csv =
+        String csv =
                 "firstName,lastName,zipcode,phone1,phone2,email,web\n"
                 + "John,Doe,90210,1234567890,9876543210,"
                 + "john@example.com,https://example.com\n";
 
+        MultipartFile file = new MockMultipartFile(
+                "file",
+                "users.csv",
+                "text/csv",
+                csv.getBytes()
+        );
 
-        MultipartFile file =
-                new MockMultipartFile(
-                        "file",
-                        "users.csv",
-                        "text/csv",
-                        csv.getBytes()
-                );
-
-
-
+      
         when(validator.validate(any(UserCsvRecord.class)))
                 .thenReturn(Collections.emptySet());
 
-
-        ProcessingAudit audit =
-                new ProcessingAudit();
+        
+        ProcessingAudit audit = new ProcessingAudit();
 
         audit.setFilename("users.csv");
         audit.setStartTime(LocalDateTime.now());
-        audit.setEndTime(LocalDateTime.now());
-        audit.setTotalRecords(1);
-        audit.setSuccessfulRecords(1);
-        audit.setFailedRecords(0);
 
-
+        
         when(auditService.startAudit("users.csv"))
                 .thenReturn(audit);
 
-        Address address =
-                new Address();
-
+        
+        Address address = new Address();
         address.setZipCode("90210");
 
-
+       
         when(addressService.addressSearchByApi("90210"))
                 .thenReturn(address);
 
+       
+        doAnswer(invocation -> {
+
+            ProcessingAudit processingAudit =
+                    invocation.getArgument(0);
+
+            processingAudit.setStatus("COMPLETED");
+            processingAudit.setEndTime(LocalDateTime.now());
+            processingAudit.setTotalRecords(1);
+            processingAudit.setSuccessfulRecords(1);
+            processingAudit.setFailedRecords(0);
+
+            return null;
+
+        }).when(auditService)
+          .completeAudit(audit, 1, 1);
 
         
-
         service.csvParse(file);
 
-
-        
-
+       
         verify(auditService)
                 .startAudit("users.csv");
 
+       
         verify(addressService)
                 .addressSearchByApi("90210");
 
+        
         verify(repository)
                 .saveAll(any());
 
+        
         verify(auditService)
                 .completeAudit(
                         audit,

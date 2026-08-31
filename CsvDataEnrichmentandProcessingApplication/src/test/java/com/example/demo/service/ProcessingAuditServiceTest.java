@@ -16,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.example.demo.entity.ProcessingAudit;
 import com.example.demo.repository.ProcessingAuditRepository;
 
-
 @ExtendWith(MockitoExtension.class)
 class ProcessingAuditServiceTest {
 
@@ -26,14 +25,11 @@ class ProcessingAuditServiceTest {
     @InjectMocks
     private ProcessingAuditService service;
 
-
     @Test
     void startAudit_shouldCreateAudit() {
 
-        ProcessingAudit audit = new ProcessingAudit();
-
         when(repository.save(any(ProcessingAudit.class)))
-                .thenReturn(audit);
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         ProcessingAudit result =
                 service.startAudit("users.csv");
@@ -44,7 +40,6 @@ class ProcessingAuditServiceTest {
 
         verify(repository).save(any(ProcessingAudit.class));
     }
-
 
     @Test
     void completeAudit_shouldCompleteAudit() {
@@ -61,7 +56,6 @@ class ProcessingAuditServiceTest {
 
         verify(repository).save(audit);
     }
-
 
     @Test
     void failAudit_shouldMarkAuditAsFailed() {
