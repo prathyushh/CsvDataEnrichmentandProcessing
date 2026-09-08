@@ -3,10 +3,9 @@ package com.example.demo.service;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import com.example.demo.dto.ZippopotamResponse;
+import com.example.demo.dto.ZipCodeResponse;
 import com.example.demo.entity.Address;
 import com.example.demo.exception.AddressEnrichmentException;
 import com.example.demo.repository.AddressRepository;
@@ -14,10 +13,10 @@ import com.example.demo.repository.AddressRepository;
 @Service
 public class AddressEnrichmentService {
 	private final AddressRepository repository;
-	private final RestClient restClient;
-	public AddressEnrichmentService(RestClient restClient,AddressRepository repository) {
-		this.restClient=restClient;
+    private final ZipProvider zipProvider;
+	public AddressEnrichmentService(AddressRepository repository,ZipProvider zipProvider) {
 		this.repository=repository;
+		this.zipProvider=zipProvider;
 	}
     @Cacheable("zipCodes")
 	public Address addressSearchByApi(String zip) {
@@ -28,19 +27,7 @@ public class AddressEnrichmentService {
               return existingAddress;
           }
     	try {
-		ZippopotamResponse apiResponse = restClient
-				                                  .get()
-				                                  .uri("/us/{zip}",zip)
-				                                  .retrieve()
-				                                  .body(ZippopotamResponse.class);
-		if (apiResponse == null
-                || apiResponse.getPlaces() == null
-                || apiResponse.getPlaces().isEmpty()) {
-
-            throw new AddressEnrichmentException(
-                    "No address information found for zip: " + zip
-            );
-    	}
+		ZipCodeResponse apiResponse = zipProvider.zipSearch(zip);
 		Address address = new Address();
 		address.setZipCode(zip);
 		address.setCountry(apiResponse.getCountry());

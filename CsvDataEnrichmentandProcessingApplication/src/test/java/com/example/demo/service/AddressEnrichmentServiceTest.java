@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.web.client.RestClient;
 
-import com.example.demo.dto.ZippopotamResponse;
+import com.example.demo.dto.ZipCodeResponse;
 import com.example.demo.entity.Address;
 import com.example.demo.exception.AddressEnrichmentException;
 import com.example.demo.repository.AddressRepository;
@@ -105,15 +105,15 @@ class AddressEnrichmentServiceTest {
                 .thenReturn(responseSpec);
 
 
-        ZippopotamResponse response =
-                mock(ZippopotamResponse.class);
+        ZipCodeResponse response =
+                mock(ZipCodeResponse.class);
 
 
         when(response.getPlaces())
                 .thenReturn(Collections.emptyList());
 
 
-        when(responseSpec.body(ZippopotamResponse.class))
+        when(responseSpec.body(ZipCodeResponse.class))
                 .thenReturn(response);
 
 

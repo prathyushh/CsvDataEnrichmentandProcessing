@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ZippopotamResponse {
+public class ZipCodeResponse {
 	 @JsonProperty("post code")
 	 private String zip;
      private String country;

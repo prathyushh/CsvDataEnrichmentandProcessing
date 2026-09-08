@@ -1,57 +1,45 @@
 package com.example.demo.service;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
 
-import org.apache.commons.csv.CSVFormat;
+
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.UserCsvRecord;
-import com.example.demo.entity.Address;
 import com.example.demo.entity.ProcessingAudit;
 import com.example.demo.entity.User;
-import com.example.demo.exception.AddressEnrichmentException;
 import com.example.demo.exception.CsvProcessingException;
 import com.example.demo.exception.InvalidCsvFileException;
 
-import com.example.demo.repository.UserRepository;
-
 import jakarta.validation.ConstraintViolation;
 
-import jakarta.validation.Validator;
 
 
 @Service
 public class CsvProcessingService {
-	private final Validator validator;
-	private final Executor executor;
-	private final UserRepository repository;
-	private final AddressEnrichmentService service;
+
+
+	
+	
+	private final CsvParseService csvParseService;
 	private final ProcessingAuditService auditService;
-	public CsvProcessingService(Validator validator,UserRepository repository,AddressEnrichmentService service,Executor executor,ProcessingAuditService auditService) {
-		this.validator=validator;
-		this.repository=repository;
-		this.service=service;
-		this.executor=executor;
+	private final ValidateRecordService validateRecordService;
+	private final CsvRecordProcessingService csvRecordProcessingService;
+	public CsvProcessingService(CsvRecordProcessingService csvRecordProcessingService,ValidateRecordService validateRecordService,ProcessingAuditService auditService,CsvParseService csvParseService) {
 		this.auditService=auditService;
-		
+		this.csvParseService=csvParseService;
+		this.validateRecordService=validateRecordService;
+		this.csvRecordProcessingService=csvRecordProcessingService;
 	}
-	private Set<ConstraintViolation<UserCsvRecord>> validateRecord(UserCsvRecord record){
-		return validator.validate(record);
-	}
+	
 	
 	
 	public String csvParse(MultipartFile file) {
@@ -64,86 +52,24 @@ public class CsvProcessingService {
 		}
 		ProcessingAudit audit = auditService.startAudit(filename);
 		List<CompletableFuture<User>> futures = new ArrayList<>();
-		List<String> failedRecords = new CopyOnWriteArrayList<>();
+		
 		try {
-		try(Reader reader = new InputStreamReader(file.getInputStream(),StandardCharsets.UTF_8)){
-			CSVFormat format = CSVFormat.DEFAULT.builder()
-					                            .setHeader()
-					                            .setSkipHeaderRecord(true)
-					                            .get();
+		      
+			  CSVParser parser = csvParseService.createParser(file);
 			
-			try(CSVParser parser = format.parse(reader)){
 				for(CSVRecord record : parser) {
-					UserCsvRecord userCsvRecord = new UserCsvRecord(
-							record.get("firstName"),
-							record.get("lastName"),
-							record.get("zipcode"),
-							record.get("phone1"),
-							record.get("phone2"),
-							record.get("email"),
-							record.get("web")		
-							);
-				Set<ConstraintViolation<UserCsvRecord>> violations = validateRecord(userCsvRecord);
-			    CompletableFuture<User> future = CompletableFuture.supplyAsync(()->{
-				try { 
-				if(violations.isEmpty()) {
-				String zip = userCsvRecord.getZipCode();
-				Address address = service.addressSearchByApi(zip);
-				User user = new User();
-				user.setFirstName(userCsvRecord.getFirstName());
-				user.setLastName(userCsvRecord.getLastName());
-				user.setPhone1(userCsvRecord.getPhone1());
-				user.setPhone2(userCsvRecord.getPhone2());
-				user.setEmail(userCsvRecord.getEmail());
-				user.setWeb(userCsvRecord.getWeb());
-				user.setAddress(address);
-				return user;
+				UserCsvRecord userCsvRecord=csvParseService.setDto(record);
+				
+				Set<ConstraintViolation<UserCsvRecord>> violations = validateRecordService.validateRecord(userCsvRecord);
+				
+			    futures.add(csvRecordProcessingService.processRecord(violations, userCsvRecord));
 				}
-				for(ConstraintViolation<UserCsvRecord> violation : violations) {
-					  String reason =
-						        "Email: " + userCsvRecord.getEmail()
-						        + " | Field: " + violation.getPropertyPath()
-						        + " | Reason: " + violation.getMessage();
-
-						    failedRecords.add(reason);
-				}
-				return null;
-				}
-				catch(AddressEnrichmentException e) {
-					 String reason =
-						        "Email: " + userCsvRecord.getEmail()
-						        + " | Zip: " + userCsvRecord.getZipCode()
-						        + " | Reason: " + e.getMessage();
-
-						    failedRecords.add(reason);
-					return null;
-				}
-				catch (Exception e) {
-				    System.out.println(
-				        "Unexpected error for email: "
-				        + userCsvRecord.getEmail()
-				        + " | Reason: "
-				        + e.getMessage()
-				    );
-				    throw new RuntimeException(e);
-				}
-				},executor);
-			    futures.add(future);
-				}
-			}
-		}
-		catch(IOException ex) {
-			throw new CsvProcessingException("failed to process CSV file",ex);
-		}
-		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-		List<User> users = futures.stream()
-				                  .map(CompletableFuture::join)
-				                  .filter(user->user!=null)
-				                  .toList();
-        Objects.requireNonNull(users);
-		repository.saveAll(users); 
+			
+		
+		
+		List<User> users = csvRecordProcessingService.addValidUser(futures);
 		System.out.println("Failed Records");
-		failedRecords.forEach(System.out::println);
+		validateRecordService.displayViolations().forEach(System.out::println);
 	    auditService.completeAudit(audit, futures.size(), users.size());
 	    
 	    return "Total Records:"+audit.getTotalRecords()+"\nSuccessful Records:"+audit.getSuccessfulRecords()+"\nFailed Records:"+audit.getFailedRecords()+"\nProcessing Time:"+Duration.between(audit.getStartTime(), audit.getEndTime()).toMillis()+"ms"; 
