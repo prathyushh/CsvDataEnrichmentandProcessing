@@ -28,7 +28,7 @@ public class CsvProcessingService {
 
 
 	
-	
+	private static final int BATCH_SIZE = 500;
 	private final CsvParseService csvParseService;
 	private final ProcessingAuditService auditService;
 	private final ValidateRecordService validateRecordService;
@@ -51,32 +51,59 @@ public class CsvProcessingService {
 			throw new InvalidCsvFileException("Invalid file format, Please upload a csv file");
 		}
 		ProcessingAudit audit = auditService.startAudit(filename);
+		int successfulRecords = 0;
+		int totalRecords = 0;
 		List<CompletableFuture<User>> futures = new ArrayList<>();
 		
 		try {
 		      
 			  CSVParser parser = csvParseService.createParser(file);
 			
-				for(CSVRecord record : parser) {
-				UserCsvRecord userCsvRecord=csvParseService.setDto(record);
-				
-				Set<ConstraintViolation<UserCsvRecord>> violations = validateRecordService.validateRecord(userCsvRecord);
-				
-			    futures.add(csvRecordProcessingService.processRecord(violations, userCsvRecord));
+			  for(CSVRecord record : parser) {
+
+				    UserCsvRecord userCsvRecord =
+				            csvParseService.setDto(record);
+
+				    Set<ConstraintViolation<UserCsvRecord>> violations =
+				            validateRecordService.validateRecord(userCsvRecord);
+
+				    futures.add(
+				        csvRecordProcessingService.processRecord(
+				            violations,
+				            userCsvRecord
+				        )
+				    );
+                    totalRecords++;
+				   
+				    if (futures.size() == BATCH_SIZE) {
+
+				        List<User> users =
+				                csvRecordProcessingService.addValidUser(futures);
+
+				        successfulRecords += users.size();
+
+				        futures.clear();
+				    }
 				}
 			
 		
 		
-		List<User> users = csvRecordProcessingService.addValidUser(futures);
+		
 		System.out.println("Failed Records");
 		validateRecordService.displayViolations().forEach(System.out::println);
-	    auditService.completeAudit(audit, futures.size(), users.size());
+		auditService.completeAudit(
+		        audit,
+		        totalRecords,
+		        successfulRecords
+		);
 	    
 	    return "Total Records:"+audit.getTotalRecords()+"\nSuccessful Records:"+audit.getSuccessfulRecords()+"\nFailed Records:"+audit.getFailedRecords()+"\nProcessing Time:"+Duration.between(audit.getStartTime(), audit.getEndTime()).toMillis()+"ms"; 
 		}
 		catch(Exception e) {
 			auditService.failAudit(audit);
+			e.printStackTrace();
 			throw new CsvProcessingException("Failed to process CSV file",e);
+			
 		}
 		}
 	

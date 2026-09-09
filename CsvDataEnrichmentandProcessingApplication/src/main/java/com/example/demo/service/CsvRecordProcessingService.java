@@ -1,6 +1,6 @@
 package com.example.demo.service;
 
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -28,7 +28,7 @@ public class CsvRecordProcessingService {
 		this.addressEnrichmentService=addressEnrichmentService;
 		this.repository=repository;
 	}
-	List<CompletableFuture<User>> futures = new ArrayList<>();
+	
 	public CompletableFuture<User> processRecord(Set<ConstraintViolation<UserCsvRecord>> violations,UserCsvRecord userCsvRecord){
 	 CompletableFuture<User> future = CompletableFuture.supplyAsync(()->{
 			try { 
