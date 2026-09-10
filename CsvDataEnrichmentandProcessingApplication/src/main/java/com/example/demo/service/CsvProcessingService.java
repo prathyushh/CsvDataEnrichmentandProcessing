@@ -42,7 +42,7 @@ public class CsvProcessingService {
 	
 	
 	
-	public String csvParse(MultipartFile file) {
+	public String csvProcess(MultipartFile file) {
 	    String filename = file.getOriginalFilename();
 		if(file.isEmpty()) {
 			throw new InvalidCsvFileException("Csv file is empty");
@@ -88,7 +88,14 @@ public class CsvProcessingService {
 			
 		
 		
-		
+			  if (!futures.isEmpty()) {
+				    List<User> users =
+				            csvRecordProcessingService.addValidUser(futures);
+
+				    successfulRecords += users.size();
+
+				    futures.clear();
+				}
 		System.out.println("Failed Records");
 		validateRecordService.displayViolations().forEach(System.out::println);
 		auditService.completeAudit(

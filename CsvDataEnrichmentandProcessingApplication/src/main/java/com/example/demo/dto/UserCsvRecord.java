@@ -20,7 +20,7 @@ public class UserCsvRecord {
 	@Pattern(regexp = "\\d{5}",message = "incorrect zip format")
 	private String zipCode;
 	@NotBlank
-	@Pattern(regexp = "\\d{3}-\\d{3}-\\d{4}",message = "incorrect phone format!")
+	//@Pattern(regexp = "\\d{3}-\\d{3}-\\d{4}",message = "incorrect phone format!")
 	private String phone1;
 	private String phone2;
 	@NotBlank

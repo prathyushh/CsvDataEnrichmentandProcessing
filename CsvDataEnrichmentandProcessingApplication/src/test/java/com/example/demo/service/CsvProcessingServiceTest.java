@@ -65,7 +65,7 @@ class CsvProcessingServiceTest {
 
         assertThrows(
                 InvalidCsvFileException.class,
-                () -> service.csvParse(file)
+                () -> service.csvProcess(file)
         );
 
         verifyNoInteractions(
@@ -87,7 +87,7 @@ class CsvProcessingServiceTest {
 
         assertThrows(
                 InvalidCsvFileException.class,
-                () -> service.csvParse(file)
+                () -> service.csvProcess(file)
         );
 
         verifyNoInteractions(
@@ -151,7 +151,7 @@ class CsvProcessingServiceTest {
 
       
 
-        String result = service.csvParse(file);
+        String result = service.csvProcess(file);
 
         
 

@@ -23,6 +23,6 @@ public class FileProcessingController {
 	   }
        @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
        public String csvParse(MultipartFile file) throws IOException {
-    	   return service.csvParse(file);
+    	   return service.csvProcess(file);
        }
 }
