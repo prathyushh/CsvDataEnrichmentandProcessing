@@ -7,16 +7,15 @@ import org.springframework.stereotype.Service;
 import com.example.demo.entity.ProcessingAudit;
 import com.example.demo.repository.ProcessingAuditRepository;
 
-
-
 @Service
 public class ProcessingAuditService {
 
 	private final ProcessingAuditRepository repository;
+
 	public ProcessingAuditService(ProcessingAuditRepository repository) {
-		this.repository=repository;
+		this.repository = repository;
 	}
-	
+
 	public ProcessingAudit startAudit(String filename) {
 		ProcessingAudit audit = new ProcessingAudit();
 		audit.setFilename(filename);
@@ -24,17 +23,19 @@ public class ProcessingAuditService {
 		audit.setStartTime(LocalDateTime.now());
 		return repository.save(audit);
 	}
-	public void completeAudit(ProcessingAudit audit,int totalRecords,int successfulRecords) {
+
+	public void completeAudit(ProcessingAudit audit, int totalRecords, int successfulRecords) {
 		audit.setStatus("COMPLETED");
 		audit.setEndTime(LocalDateTime.now());
 		audit.setTotalRecords(totalRecords);
 		audit.setSuccessfulRecords(successfulRecords);
-		audit.setFailedRecords(totalRecords-successfulRecords);
+		audit.setFailedRecords(totalRecords - successfulRecords);
 		repository.save(audit);
 	}
+
 	public void failAudit(ProcessingAudit audit) {
-	    audit.setStatus("FAILED");
-	    audit.setEndTime(LocalDateTime.now());
-	    repository.save(audit);
+		audit.setStatus("FAILED");
+		audit.setEndTime(LocalDateTime.now());
+		repository.save(audit);
 	}
 }

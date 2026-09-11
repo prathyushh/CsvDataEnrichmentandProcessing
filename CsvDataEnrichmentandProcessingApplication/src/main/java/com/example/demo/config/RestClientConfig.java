@@ -7,7 +7,7 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestClientConfig {
     @Bean
-    public RestClient zippopotamRestClient() {
+    RestClient zippopotamRestClient() {
     	return RestClient.builder()
     			         .baseUrl("https://api.zippopotam.us")
     			         .build();

@@ -58,9 +58,9 @@ public class CsvProcessingService {
 		try {
 		      
 			  CSVParser parser = csvParseService.createParser(file);
-			
+			 
 			  for(CSVRecord record : parser) {
-
+                    
 				    UserCsvRecord userCsvRecord =
 				            csvParseService.setDto(record);
 

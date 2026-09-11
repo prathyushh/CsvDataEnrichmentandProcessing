@@ -2,10 +2,8 @@ package com.example.demo.controller;
 
 
 
-import java.io.IOException;
-
-
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,7 +20,7 @@ public class FileProcessingController {
 		   this.service=service;
 	   }
        @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-       public String csvParse(MultipartFile file) throws IOException {
-    	   return service.csvProcess(file);
+       public ResponseEntity<String> csvParse(MultipartFile file) {
+    	   return ResponseEntity.ok().body(service.csvProcess(file));
        }
 }
